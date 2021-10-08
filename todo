@@ -1,0 +1,216 @@
+#! /usr/bin/env bash
+# -----------------------------------------------------------------------------
+# cl-todo -  Barebones command line ToDo list manager
+#
+#           cl-todo maintains a list of tasks in a user specified text file
+#           using the widely used checklist formatting of Markdown. Tasks can
+#           be further categorised in projects simply by adding tags with the
+#           `@` sign, e.g.  `@work`, `@personal`, `@home`, etc.
+
+# Created: Fri Oct 08, 2021  12:33pm
+# Last modified: Fri Oct 08, 2021  01:06pm
+#
+# Copyright (C) 2021  Bedartha Goswami <bedartha@gmail.com>
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# -----------------------------------------------------------------------------
+
+USAGE="
+cl-todo -  Barebones command line ToDo list manager
+
+SYNOPSIS
+    cl-todo [OPTION] [KEYWORD]
+
+DESCRIPTION
+
+    cl-todo maintains a list of tasks in a user specified text file using the
+    widely used checklist formatting of Markdown. Tasks can be further
+    categorised in projects simply by adding tags with the `@` sign, e.g.
+    `@work`, `@personal`, `@home`, etc.
+
+    
+OPTIONS
+
+    add [task]
+        add the task to the current list of ToDos.
+
+    done [task]
+        mark specified task as completed. Here [task] can be part or whole of
+        the string describing the task. Note: Ensure that [task] specifies the
+        task uniquely.
+
+    undone [task]
+        mark specified task as not completed. See `done` for more details.
+
+    edit
+        Opens the Markdown file with current tasks using a specified editor of
+        choice. The editor is specified using $CLTODO_EDTOR which by default is
+        `vim`. Note that this variable has to correspond to the command line
+        executable that will work as `$CLTODO_EDTOR /path/to/todo_file`.
+        Unfortunately, `cl-todo` is not smart enough to allow to edit each task
+        individually from the terminal itself.
+
+    all [keyword]
+        When [keyword] is not specified, list all current tasks, including both
+        completed and pending tasks. Otherwise, list all tasks with [keyword].
+        Note that his can be useful in querying tasks belonging to a project
+        with the keyword `@project`
+
+    pending [keyword]
+        When [keyword] is not specified, list pending tasks, including both
+        completed and pending tasks. Otherwise, list pending tasks with
+        [keyword].  Note that his can be useful in querying pending tasks
+        belonging to a project with the keyword `@project`
+        
+
+    completed [keyword]
+        When [keyword] is not specified, list completed tasks, including both
+        completed and completed tasks. Otherwise, list completed tasks with
+        [keyword].  Note that his can be useful in querying completed tasks
+        belonging to a project with the keyword `@project`
+
+    clean
+        Remove all completed tasks from the ToDo file and append them to the
+        ToDo archive file with time stamps corresponding to the time of
+        archival. See `file` for more details.
+
+    file [keyword]
+        list the paths to the Markdown files containing the list o current tasks
+        and the list of archived tasks respectively. Here, [keyword] can be one
+        of the following:
+
+        todo
+            list path to the Markdown file for all current tasks. The path is
+            stored in the environment variable $CLTODO_CURRENT
+
+        archive
+            list path to the Markdown file for all archived tasks. The path is
+            stored in the environment variable $CLTODO_ARCHIVE
+
+        
+
+DEPENDENCY
+    As of now, there is no dependency required.
+
+ENVIRONMENT VARIABLES
+    CLTODO_CURRENT      path to Markdown file with current tasks
+    CLTODO_ARCHIVE      path to Markdown file with archived tasks
+    CLTODO_EDITOR       name of executable with which to edit CLTODO_CURRENT
+
+AUTHOR
+    Bedartha Goswami
+    bedartha@gmail.com
+
+COPYRIGHT
+    Copyright (c) Bedartha Goswami 2021.
+    Please visit https://github.com/bedartha/cl-todo for full information.
+    This is free software; see the source code for copying conditions. There is
+    NO warranty. Use it at your own risk, or convenience, as the case may be.
+
+"
+# -----------------------------------------------------------------------------
+# (Very basic) Input argument parsing
+# -----------------------------------------------------------------------------
+# exit if no input is given
+if [ -z "$1" ]
+then
+    echo "Please provide an option! See 'qapers help' for more details"
+    exit
+fi
+
+# exit with error message if inputs are incorrect
+if [ $1 != "help" ] && [ $1 != "add" ] && [ $1 != "done" ] && [ $1 != "undone" ]
+then
+    if [ $1 != "edit" ] && [ $1 != "all" ] && [ $1 != "pending" ]
+    then
+        if [ $1 != "completed" ] && [ $1 != "clean" ] && [ $1 != "file" ]
+        then
+            echo "Please specify correct input."
+            echo "See 'cl-todo help' for more info."
+            exit
+        fi
+    fi
+fi
+
+# help text
+if [ $1 = "help" ] || [ $1 = "--help" ] || [ $1 = "-h" ]
+then
+    echo "$USAGE"
+    exit
+fi
+
+
+NOTES_DIR=Nextcloud/mlcloud/work/library/notes
+TODO_FILE=$HOME/$NOTES_DIR/todo.md
+TODO_ARCHIVE=$HOME/$NOTES_DIR/.todo.archive.md
+if [ "$1" = "list" ] || [ "$1" = "" ] || [ "$1" = "l" ]
+then
+    if [ "$2" = "" ]
+    then
+        pygmentize -l md $TODO_FILE | sort
+    else
+        pygmentize -l md $TODO_FILE | sort | grep $2
+    fi
+fi
+if [ "$1" = "edit" ]
+then
+    browse $TODO_FILE 
+fi
+if [ "$1" = "pending" ]
+then
+    sed "/\[x\]/d" "$TODO_FILE" | pygmentize -l md
+fi
+if [ "$1" = "completed" ]
+then
+    sed "/\[\ \]/d" "$TODO_FILE" | pygmentize -l md
+fi
+if [ "$1" = "add" ]
+then
+    LINE=$@
+    TASK=${LINE/add /}
+    echo "[ ] $TASK" >> $TODO_FILE
+    echo Task added
+fi
+if [ "$1" = "done" ]
+then
+    sed -i "s/\[\ \] $2/\[x\] $2/" $TODO_FILE
+    echo Task marked as done
+fi
+if [ "$1" = "undone" ]
+then
+    sed -i "s/\[x\] $2/\[\ \] $2/" $TODO_FILE
+    echo Task marked as not done
+fi
+if [ "$1" = "clean" ]
+then
+    touch $TODO_ARCHIVE
+    TASK_INFO=$(date +"%Y-%m-%d %H:%M" | xargs echo \#\# Completed on or before)
+    echo $TASK_INFO >> $TODO_ARCHIVE
+    sed "/\[\ \]\|ToDo/d" "$TODO_FILE" >> $TODO_ARCHIVE
+    echo  "" >> $TODO_ARCHIVE
+    echo Completed tasks archived
+    sed -i "/\[\x\]/d" "$TODO_FILE"
+fi
+if [ "$1" = "info" ]
+then
+    if [ "$2" = "file" ]
+    then
+        echo ToDo list stored at:
+        echo $TODO_FILE 
+    fi
+    if [ "$2" = "archive" ]
+    then
+        echo Completed tasks archived at:
+        echo $TODO_ARCHIVE
+    fi
+fi
