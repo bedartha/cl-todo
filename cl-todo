@@ -8,7 +8,7 @@
 #           `@` sign, e.g.  `@work`, `@personal`, `@home`, etc.
 
 # Created: Fri Oct 08, 2021  12:33pm
-# Last modified: Sat Oct 09, 2021  12:18am
+# Last modified: Thu Oct 14, 2021  04:38pm
 #
 # Copyright (C) 2021  Bedartha Goswami <bedartha@gmail.com>
 # This program is free software: you can redistribute it and/or modify
@@ -139,37 +139,57 @@ then
 fi
 
 # exit with error message if inputs are incorrect
-if [ $1 != "help" ] && [ $1 != "add" ] && [ $1 != "done" ] && [ $1 != "undone" ]
-then
-    if [ $1 != "init" ] && [ $1 != "edit" ] && [ $1 != "all" ] && [ $1 != "pending" ]
+InputOpts=("help" "--help" "-h" \
+              "add" "a" "remove" "rm" "done" "d" "undone" "u" \
+              "all" "l" "pending" "p" "completed" "c" \
+              "today" "tod" "tomorrow" "tom" "week" \
+              "clean" "edit" "file" "init" \
+              )
+
+VALID_INPUT=0
+for OPT in ${InputOpts[*]}
+do
+    if [ "$1" = "$OPT" ]
     then
-        if [ $1 != "completed" ] && [ $1 != "clean" ] && [ $1 != "file" ]
-        then
-            if [ "$1" != "a" ] && [ "$1" != "c" ] && [ "$1" != "p" ] && [ "$1" != "rm" ]
-            then
-                if [ "$1" != "remove" ] && [ "$1" != "d" ] && [ "$1" != "u" ] && [ "$1" != "l" ] && [ "$1" != "e" ]
-                then
-                    echo "cl-todo"
-                    echo "Error: Incorrect input"
-                    echo "See 'cl-todo help' for more details."
-                    exit
-                fi
-            fi
-        fi
-    fi
+        VALID_INPUT=1
+        break
+    fi  
+done
+
+if [ $VALID_INPUT -eq 0 ]
+then
+    echo "cl-todo"
+    echo "Error: Invalid input"
+    echo "See 'cl-todo help' for more details."
+    exit
 fi
 
-# help text
+# -----------------------------------------------------------------------------
+# help, --help -h
+# -----------------------------------------------------------------------------
+# display help message
 if [ $1 = "help" ] || [ $1 = "--help" ] || [ $1 = "-h" ]
 then
     echo "$USAGE"
     exit
 fi
 
-
 # source basic parameters from $CLTODORC
 CLTODORC=$HOME/.cltodorc
 source $CLTODORC
+
+
+# -----------------------------------------------------------------------------
+# parse_dates
+# -----------------------------------------------------------------------------
+# helper function to parse date information in task text string
+parse_line () {
+    LINE=$@
+    TASK=${LINE/@*/}
+    DATE=${LINE/*due/}
+    PROJECT=$(echo ${LINE/*@/} | awk '{print $1}')
+}
+
 
 # -----------------------------------------------------------------------------
 # add
@@ -177,10 +197,16 @@ source $CLTODORC
 # add a new task
 if [ "$1" = "add" ] || [ "$1" = "a" ]
 then
-    LINE=$@
-    TASK=${LINE/$1 /}
-    echo "[ ] $TASK" >> $CLTODO_CURRENT
-    echo Task added: $TASK
+    echo Enter details of task:
+    read TASK
+    echo Enter due date:
+    read DATE
+    echo Enter project name:
+    read PROJECT
+    DATE=$(date --date="$DATE"  +"%a %d %b %Y")
+    LINE="$TASK @$PROJECT #due $DATE"
+    echo "[ ] $LINE" >> $CLTODO_CURRENT
+    echo Task added: $LINE
 fi
 
 # -----------------------------------------------------------------------------
@@ -191,7 +217,7 @@ if [ "$1" = "remove" ] || [ "$1" = "rm" ]
 then
     LINE=$@
     TASK=${LINE/$1 /}
-    TASK_FULL=$(grep $TASK $CLTODO_CURRENT)
+    TASK_FULL=$(grep "$TASK" $CLTODO_CURRENT)
     sed -i "/$TASK/d" "$CLTODO_CURRENT"
     echo Removed task: ${TASK_FULL:4}
 fi
@@ -204,7 +230,7 @@ if [ "$1" = "done" ] || [ "$1" = "d" ]
 then
     LINE=$@
     TASK=${LINE/$1 /}
-    TASK_FULL=$(grep $TASK $CLTODO_CURRENT)
+    TASK_FULL=$(grep "$TASK" $CLTODO_CURRENT)
     sed -i "s/\[\ \] $TASK/\[x\] $TASK/" $CLTODO_CURRENT
     echo Marked as done: ${TASK_FULL:4}
 fi
@@ -218,7 +244,7 @@ if [ "$1" = "undone" ] || [ "$1" = "u" ]
 then
     LINE=$@
     TASK=${LINE/$1 /}
-    TASK_FULL=$(grep $TASK $CLTODO_CURRENT)
+    TASK_FULL=$(grep "$TASK" $CLTODO_CURRENT)
     sed -i "s/\[x\] $TASK/\[\ \] $TASK/" $CLTODO_CURRENT
     echo Marked as not done: ${TASK_FULL:4} 
 fi
@@ -242,7 +268,7 @@ then
     then
         pygmentize -l md $CLTODO_CURRENT | sort
     else
-        pygmentize -l md $CLTODO_CURRENT | sort | grep $2
+        pygmentize -l md $CLTODO_CURRENT | sort | grep "$2"
     fi
 fi
 
@@ -256,7 +282,7 @@ then
     then
         sed "/\[x\]/d" "$CLTODO_CURRENT" | pygmentize -l md | sort
     else
-        sed "/\[x\]/d" "$CLTODO_CURRENT" | pygmentize -l md | sort | grep $2
+        sed "/\[x\]/d" "$CLTODO_CURRENT" | pygmentize -l md | sort | grep "$2"
     fi
 fi
 
@@ -270,9 +296,43 @@ then
     then
         sed "/\[ \]/d" "$CLTODO_CURRENT" | pygmentize -l md | sort
     else
-        sed "/\[ \]/d" "$CLTODO_CURRENT" | pygmentize -l md | sort | grep $2
+        sed "/\[ \]/d" "$CLTODO_CURRENT" | pygmentize -l md | sort | grep "$2"
     fi
 fi
+
+# -----------------------------------------------------------------------------
+# today
+# -----------------------------------------------------------------------------
+# list all (i.e. pending and completed) tasks due on current day
+if [ "$1" = "today" ] || [ "$1" = "tod" ]
+then
+    TODAY=$(date --date="today"  +"%a %d %b %Y")
+    sed -n "/$TODAY/p" "$CLTODO_CURRENT" | pygmentize -l md | sort
+fi
+
+# -----------------------------------------------------------------------------
+# tomorrow
+# -----------------------------------------------------------------------------
+# list all (i.e. pending and completed) tasks due on the next day
+if [ "$1" = "tomorrow" ] || [ "$1" = "tom" ]
+then
+    TOMORROW=$(date --date="tomorrow"  +"%a %d %b %Y")
+    sed -n "/$TOMORROW/p" "$CLTODO_CURRENT" | pygmentize -l md | sort
+fi
+
+# -----------------------------------------------------------------------------
+# this week
+# -----------------------------------------------------------------------------
+# list all (i.e. pending and completed) tasks due the current week
+if [ "$1" = "week" ] || [ "$1" = "wk" ]
+then
+    DAYOFWEEK=$(date --date="today"  +"%u")
+    for i in $(seq 0 1 $(expr 7 - $DAYOFWEEK)); do
+        DATE=$(date --date="today +$i day" +"%a %d %b %Y")
+        sed -n "/$DATE/p" "$CLTODO_CURRENT" | pygmentize -l md | sort
+    done
+fi
+
 
 # -----------------------------------------------------------------------------
 # clean
@@ -342,9 +402,4 @@ then
     echo "CLTODO_EDITOR=$CLTODO_EDITOR" >> $CLTODORC
     echo "parameters initialized. Have fun using cl-todo"
 fi
-
-
-
-
-
 
