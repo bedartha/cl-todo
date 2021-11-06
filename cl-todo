@@ -8,7 +8,7 @@
 #           `@` sign, e.g.  `@work`, `@personal`, `@home`, etc.
 
 # Created: Fri Oct 08, 2021  12:33pm
-# Last modified: Sat Nov 06, 2021  12:58am
+# Last modified: Sat Nov 06, 2021  01:48am
 #
 # Copyright (C) 2021  Bedartha Goswami <bedartha@gmail.com>
 # This program is free software: you can redistribute it and/or modify
@@ -219,8 +219,9 @@ fi
 # mark task as completed
 if [ "$1" = "done" ] || [ "$1" = "d" ]
 then
+    TODAY=$(date --date="today"  +"%Y-%m-%d")
     TASK=$(sed -n "$2p" $CLTODO_CURRENT)
-    sed -i "$2 s/^/x /" $CLTODO_CURRENT
+    sed -i "$2 s/^/x $TODAY /" $CLTODO_CURRENT
     echo Marked as done: $TASK
 fi
 
@@ -251,7 +252,6 @@ fi
 # list all current tasks
 if [ "$1" = "all" ] || [ "$1" = "l" ]
 then
-    NUM_TASKS=$(wc -l $CLTODO_CURRENT | cut -f 1 -d " ")+1
     if [ "$2" = "" ]
     then
         cat -b $CLTODO_CURRENT | pygmentize -s -l todotxt
