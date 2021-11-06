@@ -8,7 +8,7 @@
 #           `@` sign, e.g.  `@work`, `@personal`, `@home`, etc.
 
 # Created: Fri Oct 08, 2021  12:33pm
-# Last modified: Thu Oct 14, 2021  04:38pm
+# Last modified: Sat Nov 06, 2021  12:58am
 #
 # Copyright (C) 2021  Bedartha Goswami <bedartha@gmail.com>
 # This program is free software: you can redistribute it and/or modify
@@ -143,7 +143,7 @@ InputOpts=("help" "--help" "-h" \
               "add" "a" "remove" "rm" "done" "d" "undone" "u" \
               "all" "l" "pending" "p" "completed" "c" \
               "today" "tod" "tomorrow" "tom" "week" \
-              "clean" "edit" "file" "init" \
+              "clean" "edit" "e" "file" "init" \
               )
 
 VALID_INPUT=0
@@ -197,15 +197,8 @@ parse_line () {
 # add a new task
 if [ "$1" = "add" ] || [ "$1" = "a" ]
 then
-    echo Enter details of task:
-    read TASK
-    echo Enter due date:
-    read DATE
-    echo Enter project name:
-    read PROJECT
-    DATE=$(date --date="$DATE"  +"%a %d %b %Y")
-    LINE="$TASK @$PROJECT #due $DATE"
-    echo "[ ] $LINE" >> $CLTODO_CURRENT
+    LINE=$2
+    echo "$LINE" >> $CLTODO_CURRENT
     echo Task added: $LINE
 fi
 
@@ -215,11 +208,9 @@ fi
 # remove existing task
 if [ "$1" = "remove" ] || [ "$1" = "rm" ]
 then
-    LINE=$@
-    TASK=${LINE/$1 /}
-    TASK_FULL=$(grep "$TASK" $CLTODO_CURRENT)
-    sed -i "/$TASK/d" "$CLTODO_CURRENT"
-    echo Removed task: ${TASK_FULL:4}
+    TASK=$(sed -n "$2p" $CLTODO_CURRENT)
+    sed -i "$2d" $CLTODO_CURRENT
+    echo Removed task: $TASK
 fi
 
 # -----------------------------------------------------------------------------
@@ -228,11 +219,9 @@ fi
 # mark task as completed
 if [ "$1" = "done" ] || [ "$1" = "d" ]
 then
-    LINE=$@
-    TASK=${LINE/$1 /}
-    TASK_FULL=$(grep "$TASK" $CLTODO_CURRENT)
-    sed -i "s/\[\ \] $TASK/\[x\] $TASK/" $CLTODO_CURRENT
-    echo Marked as done: ${TASK_FULL:4}
+    TASK=$(sed -n "$2p" $CLTODO_CURRENT)
+    sed -i "$2 s/^/x /" $CLTODO_CURRENT
+    echo Marked as done: $TASK
 fi
 
 
@@ -242,11 +231,9 @@ fi
 # mark task as not completed
 if [ "$1" = "undone" ] || [ "$1" = "u" ]
 then
-    LINE=$@
-    TASK=${LINE/$1 /}
-    TASK_FULL=$(grep "$TASK" $CLTODO_CURRENT)
-    sed -i "s/\[x\] $TASK/\[\ \] $TASK/" $CLTODO_CURRENT
-    echo Marked as not done: ${TASK_FULL:4} 
+    TASK=$(sed -n "$2p" $CLTODO_CURRENT)
+    sed -i "$2 s/^x //" $CLTODO_CURRENT
+    echo Marked as not done: $TASK
 fi
 
 # -----------------------------------------------------------------------------
@@ -264,11 +251,12 @@ fi
 # list all current tasks
 if [ "$1" = "all" ] || [ "$1" = "l" ]
 then
+    NUM_TASKS=$(wc -l $CLTODO_CURRENT | cut -f 1 -d " ")+1
     if [ "$2" = "" ]
     then
-        pygmentize -l md $CLTODO_CURRENT | sort
+        cat -b $CLTODO_CURRENT | pygmentize -s -l todotxt
     else
-        pygmentize -l md $CLTODO_CURRENT | sort | grep "$2"
+        cat -b $CLTODO_CURRENT | pygmentize -s -l todotxt | grep "$2"
     fi
 fi
 
@@ -280,9 +268,9 @@ if [ "$1" = "pending" ] || [ "$1" = "p" ]
 then
     if [ "$2" = "" ]
     then
-        sed "/\[x\]/d" "$CLTODO_CURRENT" | pygmentize -l md | sort
+        cat -b $CLTODO_CURRENT | sed "/x/d" | pygmentize -l todotxt
     else
-        sed "/\[x\]/d" "$CLTODO_CURRENT" | pygmentize -l md | sort | grep "$2"
+        cat -b $CLTODO_CURRENT | sed "/x/d" | pygmentize -l todotxt | grep "$2"
     fi
 fi
 
@@ -294,9 +282,9 @@ if [ "$1" = "completed" ] || [ "$1" = "c" ]
 then
     if [ "$2" = "" ]
     then
-        sed "/\[ \]/d" "$CLTODO_CURRENT" | pygmentize -l md | sort
+        cat -b $CLTODO_CURRENT | sed -n "/x/p" | pygmentize -l todotxt
     else
-        sed "/\[ \]/d" "$CLTODO_CURRENT" | pygmentize -l md | sort | grep "$2"
+        cat -b $CLTODO_CURRENT | sed -n "/x/p" | pygmentize -l todotxt | grep "$2"
     fi
 fi
 
@@ -306,8 +294,8 @@ fi
 # list all (i.e. pending and completed) tasks due on current day
 if [ "$1" = "today" ] || [ "$1" = "tod" ]
 then
-    TODAY=$(date --date="today"  +"%a %d %b %Y")
-    sed -n "/$TODAY/p" "$CLTODO_CURRENT" | pygmentize -l md | sort
+    TODAY=$(date --date="today"  +"%Y-%m-%d")
+    sed -n "/$TODAY/p" "$CLTODO_CURRENT" | pygmentize -l todotxt | sort
 fi
 
 # -----------------------------------------------------------------------------
@@ -316,8 +304,8 @@ fi
 # list all (i.e. pending and completed) tasks due on the next day
 if [ "$1" = "tomorrow" ] || [ "$1" = "tom" ]
 then
-    TOMORROW=$(date --date="tomorrow"  +"%a %d %b %Y")
-    sed -n "/$TOMORROW/p" "$CLTODO_CURRENT" | pygmentize -l md | sort
+    TOMORROW=$(date --date="tomorrow"  +"%Y-%m-%d")
+    sed -n "/$TOMORROW/p" "$CLTODO_CURRENT" | pygmentize -l todotxt | sort
 fi
 
 # -----------------------------------------------------------------------------
@@ -328,8 +316,8 @@ if [ "$1" = "week" ] || [ "$1" = "wk" ]
 then
     DAYOFWEEK=$(date --date="today"  +"%u")
     for i in $(seq 0 1 $(expr 7 - $DAYOFWEEK)); do
-        DATE=$(date --date="today +$i day" +"%a %d %b %Y")
-        sed -n "/$DATE/p" "$CLTODO_CURRENT" | pygmentize -l md | sort
+        DATE=$(date --date="today +$i day" +"%Y-%m-%d")
+        sed -n "/$DATE/p" "$CLTODO_CURRENT" | pygmentize -l todotxt | sort
     done
 fi
 
@@ -380,8 +368,8 @@ then
     then
         CLTODO_DIR=$HOME/cl-todo
     fi
-    CLTODO_CURRENT=$CLTODO_DIR/current.md
-    CLTODO_ARCHIVE=$CLTODO_DIR/.archive.md
+    CLTODO_CURRENT=$CLTODO_DIR/todo.txt
+    CLTODO_ARCHIVE=$CLTODO_DIR/.archive.txt
     mkdir -p $CLTODO_DIR
     touch $CLTODO_CURRENT
     touch $CLTODO_ARCHIVE
