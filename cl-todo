@@ -8,7 +8,7 @@
 #           `@` sign, e.g.  `@work`, `@personal`, `@home`, etc.
 
 # Created: Fri Oct 08, 2021  12:33pm
-# Last modified: Sat Nov 06, 2021  01:48am
+# Last modified: Sat Nov 06, 2021  03:19am
 #
 # Copyright (C) 2021  Bedartha Goswami <bedartha@gmail.com>
 # This program is free software: you can redistribute it and/or modify
@@ -141,9 +141,10 @@ fi
 # exit with error message if inputs are incorrect
 InputOpts=("help" "--help" "-h" \
               "add" "a" "remove" "rm" "done" "d" "undone" "u" \
-              "all" "l" "pending" "p" "completed" "c" \
+              "all" "l" "ls" "pending" "p" "completed" "c" \
               "today" "tod" "tomorrow" "tom" "week" \
               "clean" "edit" "e" "file" "init" \
+              "projects" "contexts"
               )
 
 VALID_INPUT=0
@@ -229,7 +230,7 @@ fi
 # -----------------------------------------------------------------------------
 # undone
 # -----------------------------------------------------------------------------
-# mark task as not completed
+# mark task as not complete"
 if [ "$1" = "undone" ] || [ "$1" = "u" ]
 then
     TASK=$(sed -n "$2p" $CLTODO_CURRENT)
@@ -250,13 +251,13 @@ fi
 # all
 # -----------------------------------------------------------------------------
 # list all current tasks
-if [ "$1" = "all" ] || [ "$1" = "l" ]
+if [ "$1" = "all" ] || [ "$1" = "l" ] || [ "$1" = "ls" ]
 then
     if [ "$2" = "" ]
     then
-        cat -b $CLTODO_CURRENT | pygmentize -s -l todotxt
+        pygmentize -l todotxt $CLTODO_CURRENT | cat -b
     else
-        cat -b $CLTODO_CURRENT | pygmentize -s -l todotxt | grep "$2"
+        pygmentize -l todotxt $CLTODO_CURRENT | grep "$2"
     fi
 fi
 
@@ -268,9 +269,9 @@ if [ "$1" = "pending" ] || [ "$1" = "p" ]
 then
     if [ "$2" = "" ]
     then
-        cat -b $CLTODO_CURRENT | sed "/x/d" | pygmentize -l todotxt
+        sed "/^x/d" $CLTODO_CURRENT | pygmentize -l todotxt
     else
-        cat -b $CLTODO_CURRENT | sed "/x/d" | pygmentize -l todotxt | grep "$2"
+        sed "/^x/d" $CLTODO_CURRENT | pygmentize -l todotxt | grep "$2"
     fi
 fi
 
@@ -282,9 +283,9 @@ if [ "$1" = "completed" ] || [ "$1" = "c" ]
 then
     if [ "$2" = "" ]
     then
-        cat -b $CLTODO_CURRENT | sed -n "/x/p" | pygmentize -l todotxt
+        sed -n "/^x/p" $CLTODO_CURRENT | pygmentize -l todotxt
     else
-        cat -b $CLTODO_CURRENT | sed -n "/x/p" | pygmentize -l todotxt | grep "$2"
+        sed -n "/^x/p" $CLTODO_CURRENT | pygmentize -l todotxt | grep "$2"
     fi
 fi
 
@@ -321,6 +322,23 @@ then
     done
 fi
 
+# -----------------------------------------------------------------------------
+# projects
+# -----------------------------------------------------------------------------
+# list all current projects
+if [ "$1" = "projects" ]
+then
+    cat Text/todo.txt | grep -o "\w*@\w*" | sort | uniq -c
+fi
+
+# -----------------------------------------------------------------------------
+# contexts
+# -----------------------------------------------------------------------------
+# list all current contexts
+if [ "$1" = "contexts" ]
+then
+    cat Text/todo.txt | grep -o "\w*+\w*" | sort | uniq -c
+fi
 
 # -----------------------------------------------------------------------------
 # clean
@@ -329,12 +347,9 @@ fi
 if [ "$1" = "clean" ]
 then
     touch $CLTODO_ARCHIVE
-    TASK_INFO=$(date +"%Y-%m-%d %H:%M" | xargs echo \#\# Completed on or before)
-    echo $TASK_INFO >> $CLTODO_ARCHIVE
-    sed "/\[\ \]\|ToDo/d" "$CLTODO_CURRENT" >> $CLTODO_ARCHIVE
-    echo  "" >> $CLTODO_ARCHIVE
+    sed -n "/^x/p" "$CLTODO_CURRENT" >> $CLTODO_ARCHIVE
     echo Completed tasks archived
-    sed -i "/\[\x\]/d" "$CLTODO_CURRENT"
+    sed -i "/^x/d" "$CLTODO_CURRENT"
 fi
 
 # -----------------------------------------------------------------------------
@@ -369,7 +384,7 @@ then
         CLTODO_DIR=$HOME/cl-todo
     fi
     CLTODO_CURRENT=$CLTODO_DIR/todo.txt
-    CLTODO_ARCHIVE=$CLTODO_DIR/.archive.txt
+    CLTODO_ARCHIVE=$CLTODO_DIR/.archive.todo.txt
     mkdir -p $CLTODO_DIR
     touch $CLTODO_CURRENT
     touch $CLTODO_ARCHIVE
