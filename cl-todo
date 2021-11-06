@@ -8,7 +8,7 @@
 #           `@` sign, e.g.  `@work`, `@personal`, `@home`, etc.
 
 # Created: Fri Oct 08, 2021  12:33pm
-# Last modified: Sat Nov 06, 2021  03:19am
+# Last modified: Sat Nov 06, 2021  03:21am
 #
 # Copyright (C) 2021  Bedartha Goswami <bedartha@gmail.com>
 # This program is free software: you can redistribute it and/or modify
@@ -328,7 +328,7 @@ fi
 # list all current projects
 if [ "$1" = "projects" ]
 then
-    cat Text/todo.txt | grep -o "\w*@\w*" | sort | uniq -c
+    cat Text/todo.txt | grep -o "\w*+\w*" | sort | uniq -c
 fi
 
 # -----------------------------------------------------------------------------
@@ -337,7 +337,7 @@ fi
 # list all current contexts
 if [ "$1" = "contexts" ]
 then
-    cat Text/todo.txt | grep -o "\w*+\w*" | sort | uniq -c
+    cat Text/todo.txt | grep -o "\w*@\w*" | sort | uniq -c
 fi
 
 # -----------------------------------------------------------------------------
