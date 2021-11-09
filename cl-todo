@@ -8,7 +8,7 @@
 #           `@` sign, e.g.  `@work`, `@personal`, `@home`, etc.
 
 # Created: Fri Oct 08, 2021  12:33pm
-# Last modified: Sat Nov 06, 2021  03:21am
+# Last modified: Tue Nov 09, 2021  07:56am
 #
 # Copyright (C) 2021  Bedartha Goswami <bedartha@gmail.com>
 # This program is free software: you can redistribute it and/or modify
@@ -198,8 +198,9 @@ parse_line () {
 # add a new task
 if [ "$1" = "add" ] || [ "$1" = "a" ]
 then
+    TODAY=$(date --date="today"  +"%Y-%m-%d")
     LINE=$2
-    echo "$LINE" >> $CLTODO_CURRENT
+    echo "$TODAY $LINE" >> $CLTODO_CURRENT
     echo Task added: $LINE
 fi
 
@@ -209,8 +210,8 @@ fi
 # remove existing task
 if [ "$1" = "remove" ] || [ "$1" = "rm" ]
 then
-    TASK=$(sed -n "$2p" $CLTODO_CURRENT)
-    sed -i "$2d" $CLTODO_CURRENT
+    TASK=$(sed -n "/$2/p" $CLTODO_CURRENT)
+    sed -i "/$2/d" $CLTODO_CURRENT
     echo Removed task: $TASK
 fi
 
@@ -221,8 +222,8 @@ fi
 if [ "$1" = "done" ] || [ "$1" = "d" ]
 then
     TODAY=$(date --date="today"  +"%Y-%m-%d")
-    TASK=$(sed -n "$2p" $CLTODO_CURRENT)
-    sed -i "$2 s/^/x $TODAY /" $CLTODO_CURRENT
+    TASK=$(sed -n "/$2/p" $CLTODO_CURRENT)
+    sed -i "/$2/s/^/x $TODAY /" $CLTODO_CURRENT
     echo Marked as done: $TASK
 fi
 
@@ -233,8 +234,8 @@ fi
 # mark task as not complete"
 if [ "$1" = "undone" ] || [ "$1" = "u" ]
 then
-    TASK=$(sed -n "$2p" $CLTODO_CURRENT)
-    sed -i "$2 s/^x //" $CLTODO_CURRENT
+    TASK=$(sed -n "/$2/p" $CLTODO_CURRENT)
+    sed -i "/$2/s/^x 20[0-9][0-9]-[0-1][0-9]-[0-3][0-9] //" $CLTODO_CURRENT
     echo Marked as not done: $TASK
 fi
 
@@ -255,7 +256,7 @@ if [ "$1" = "all" ] || [ "$1" = "l" ] || [ "$1" = "ls" ]
 then
     if [ "$2" = "" ]
     then
-        pygmentize -l todotxt $CLTODO_CURRENT | cat -b
+        pygmentize -l todotxt $CLTODO_CURRENT
     else
         pygmentize -l todotxt $CLTODO_CURRENT | grep "$2"
     fi
@@ -296,7 +297,7 @@ fi
 if [ "$1" = "today" ] || [ "$1" = "tod" ]
 then
     TODAY=$(date --date="today"  +"%Y-%m-%d")
-    sed -n "/$TODAY/p" "$CLTODO_CURRENT" | pygmentize -l todotxt | sort
+    sed -n "/due:$TODAY/p" "$CLTODO_CURRENT" | pygmentize -l todotxt | sort
 fi
 
 # -----------------------------------------------------------------------------
