@@ -58,6 +58,7 @@ To Do
     - [ ] Add feature list
     - [ ] Add examples
 - [ ] Add mobile synchronisation
+- [ ] Add confirmation before task deletion
 
 
 LICENSE
